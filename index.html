@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sokoban</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>Sokoban</h1>
+      <div class="level-picker">
+        <button id="prev" class="icon" title="Previous level ([)" aria-label="Previous level">&#8249;</button>
+        <select id="level-select" aria-label="Choose level"></select>
+        <button id="next" class="icon" title="Next level (])" aria-label="Next level">&#8250;</button>
+      </div>
+    </header>
+
+    <section class="stats" aria-live="polite">
+      <div><span class="label">Moves</span><span id="moves">0</span></div>
+      <div><span class="label">Pushes</span><span id="pushes">0</span></div>
+      <div><span class="label">Boxes</span><span id="boxes">0/0</span></div>
+      <div><span class="label">Best</span><span id="best">&ndash;</span></div>
+      <div><span class="label">Par</span><span id="par">&ndash;</span></div>
+    </section>
+
+    <div class="board-wrap" id="board-wrap">
+      <canvas id="board" aria-label="Sokoban board"></canvas>
+      <div id="overlay" class="overlay hidden">
+        <div class="overlay-card">
+          <h2 id="overlay-title">Level complete!</h2>
+          <p id="overlay-text"></p>
+          <button id="overlay-next">Next level</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="undo" title="Undo (Z)">Undo</button>
+      <button id="restart" title="Restart (R)">Restart</button>
+    </div>
+
+    <div class="dpad" aria-hidden="true">
+      <button data-dir="up">&#9650;</button>
+      <button data-dir="left">&#9664;</button>
+      <button data-dir="down">&#9660;</button>
+      <button data-dir="right">&#9654;</button>
+    </div>
+
+    <p class="help">Arrows / WASD to move &middot; Z undo &middot; R restart &middot; [ ] change level</p>
+  </main>
+
+  <script src="levels.js"></script>
+  <script src="sokoban.js"></script>
+</body>
+</html>
