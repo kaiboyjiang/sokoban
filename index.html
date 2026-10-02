@@ -6,11 +6,16 @@
   <title>Sokoban</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem('theme')
+      || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  </script>
 </head>
 <body>
   <main class="app">
     <header class="topbar">
       <h1>Sokoban</h1>
+      <button id="theme-toggle" type="button" title="Toggle theme (T)" aria-label="Toggle light and dark mode"></button>
       <div class="level-picker">
         <button id="prev" class="icon" title="Previous level ([)" aria-label="Previous level">&#8249;</button>
         <select id="level-select" aria-label="Choose level"></select>
@@ -49,7 +54,7 @@
       <button data-dir="right">&#9654;</button>
     </div>
 
-    <p class="help">Arrows / WASD to move &middot; Z undo &middot; R restart &middot; [ ] change level</p>
+    <p class="help">Arrows / WASD to move &middot; Z undo &middot; R restart &middot; [ ] change level &middot; T theme</p>
   </main>
 
   <script src="levels.js"></script>

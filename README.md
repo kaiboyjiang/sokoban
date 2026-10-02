@@ -12,6 +12,7 @@ Push every box onto a goal. You can only push (never pull) and only one box at a
 | Undo | Z / Backspace |
 | Restart | R |
 | Previous / next level | `[` / `]` |
+| Toggle light/dark mode | T (or the header button) |
 
 12 levels, from a one-push tutorial to a 4-box warehouse. Each level shows its **par** (minimum possible moves). Your best move count per level is saved in `localStorage`.
 

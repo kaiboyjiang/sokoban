@@ -21,6 +21,7 @@
   const nextBtn = document.getElementById("next");
   const undoBtn = document.getElementById("undo");
   const restartBtn = document.getElementById("restart");
+  const themeToggle = document.getElementById("theme-toggle");
   const overlay = document.getElementById("overlay");
   const overlayTitle = document.getElementById("overlay-title");
   const overlayText = document.getElementById("overlay-text");
@@ -63,6 +64,20 @@
       "box-done", "box-done-edge", "player", "player-edge", "bg",
     ];
     colors = Object.fromEntries(names.map((n) => [n, css.getPropertyValue(`--${n}`).trim()]));
+    const isDark = document.documentElement.dataset.theme !== "light";
+    themeToggle.textContent = isDark ? "Light mode" : "Dark mode";
+  }
+
+  function toggleTheme() {
+    const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = next;
+    try {
+      localStorage.setItem("theme", next);
+    } catch {
+      // Storage unavailable; theme just won't persist.
+    }
+    loadTheme();
+    draw();
   }
 
   const key = (x, y) => `${x},${y}`;
@@ -338,6 +353,8 @@
     } else if (e.code === "KeyZ" || e.code === "Backspace" || e.code === "KeyU") {
       e.preventDefault();
       undo();
+    } else if (e.code === "KeyT") {
+      toggleTheme();
     } else if (e.code === "KeyR") {
       startLevel(levelIndex);
     } else if (e.code === "BracketRight" || e.code === "KeyN") {
@@ -377,6 +394,7 @@
   prevBtn.addEventListener("click", () => startLevel(levelIndex - 1));
   nextBtn.addEventListener("click", nextLevel);
   undoBtn.addEventListener("click", undo);
+  themeToggle.addEventListener("click", toggleTheme);
   restartBtn.addEventListener("click", () => startLevel(levelIndex));
   overlayNext.addEventListener("click", nextLevel);
   window.addEventListener("resize", resize);
