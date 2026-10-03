@@ -1,5 +1,4 @@
-# sokoban
-Vibecoded sokoban by Devin
+# Vibecoded Sokoban
 
 A browser Sokoban game in plain HTML/CSS/JS — no build step. Open `index.html` in a browser (or serve the folder, e.g. `python3 -m http.server`).
 
