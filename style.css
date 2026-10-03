@@ -102,6 +102,7 @@ button, select {
 button:hover, select:hover { background: var(--button-hover); }
 button:disabled { opacity: 0.4; cursor: default; }
 button.icon { padding: 4px 12px; font-size: 1.2rem; line-height: 1; }
+button.hidden { display: none; }
 
 .stats {
   display: flex;

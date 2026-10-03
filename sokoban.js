@@ -21,6 +21,7 @@
   const nextBtn = document.getElementById("next");
   const undoBtn = document.getElementById("undo");
   const restartBtn = document.getElementById("restart");
+  const newPuzzleBtn = document.getElementById("new-puzzle");
   const themeToggle = document.getElementById("theme-toggle");
   const overlay = document.getElementById("overlay");
   const overlayTitle = document.getElementById("overlay-title");
@@ -32,12 +33,18 @@
     boxes: document.getElementById("boxes"),
     best: document.getElementById("best"),
     par: document.getElementById("par"),
+    parLabel: document.getElementById("par-label"),
   };
+  // Index of the endless random mode, listed after the fixed levels.
+  const RANDOM = LEVELS.length;
 
   let colors = {};
   let progress = loadProgress();
-  let levelIndex = Math.min(progress.current || 0, LEVELS.length - 1);
+  let levelIndex = Math.min(progress.current || 0, RANDOM);
   let state = null;
+  let generating = null;
+  let genId = 0;
+  let worker = null;
   let tile = 32;
   let facing = "down";
 
@@ -114,20 +121,72 @@
     return { width, height, walls, goals, floor, boxes, player, moves: 0, pushes: 0, history: [], won: false };
   }
 
+  function currentLevel() {
+    return levelIndex === RANDOM ? progress.random.level : LEVELS[levelIndex];
+  }
+
   function startLevel(index) {
-    levelIndex = (index + LEVELS.length) % LEVELS.length;
-    state = parseLevel(LEVELS[levelIndex]);
-    facing = "down";
+    levelIndex = (index + RANDOM + 1) % (RANDOM + 1);
     progress.current = levelIndex;
     saveProgress();
     levelSelect.value = String(levelIndex);
+    newPuzzleBtn.classList.toggle("hidden", levelIndex !== RANDOM);
+    genId++;
+    generating = null;
+    if (levelIndex === RANDOM && (!progress.random || progress.random.solved)) {
+      const r = progress.random;
+      requestRandom(r ? r.level.n + 1 : 1, r ? r.level.pushes : 0);
+      return;
+    }
+    state = parseLevel(currentLevel());
+    facing = "down";
     hideOverlay();
     resize();
     update();
   }
 
+  // Random mode: puzzle n+1 must need at least as many pushes as puzzle n (see generator.js).
+  function requestRandom(n, minPushes) {
+    generating = { id: ++genId, n, minPushes };
+    showOverlay(`Generating puzzle #${n}…`, "Building a harder puzzle. This can take a few seconds.", null);
+    if (worker) worker.postMessage(generating);
+    else generateInline(generating);
+  }
+
+  function generateInline(job) {
+    // Let the overlay paint before blocking the main thread.
+    setTimeout(() => receiveRandom(job.id, generateLevelRetrying(job.n, job.minPushes), job.minPushes), 50);
+  }
+
+  function receiveRandom(id, level, minPushes) {
+    if (!generating || id !== generating.id) return;
+    progress.random = { level, minPushes, solved: false };
+    saveProgress();
+    populateSelect();
+    startLevel(RANDOM);
+  }
+
+  function newPuzzle() {
+    if (levelIndex !== RANDOM || !progress.random) return;
+    genId++;
+    requestRandom(progress.random.level.n, progress.random.minPushes);
+  }
+
+  function initWorker() {
+    try {
+      worker = new Worker("generator.js");
+    } catch {
+      return; // e.g. file:// pages; generate on the main thread instead.
+    }
+    worker.onmessage = (e) => receiveRandom(e.data.id, e.data.level, generating && generating.minPushes);
+    worker.onerror = () => {
+      worker = null;
+      if (generating) generateInline(generating);
+    };
+  }
+
   function move(dir) {
-    if (!state || state.won) return;
+    if (!state || state.won || generating) return;
     const { dx, dy } = DIRS[dir];
     const { x, y } = state.player;
     const nx = x + dx;
@@ -156,7 +215,7 @@
   }
 
   function undo() {
-    if (!state || state.won || !state.history.length) return;
+    if (!state || state.won || generating || !state.history.length) return;
     const last = state.history.pop();
     const { dx, dy } = DIRS[last.dir];
     if (last.pushed) {
@@ -184,6 +243,15 @@
 
   function win() {
     state.won = true;
+    if (levelIndex === RANDOM) {
+      const r = progress.random;
+      r.solved = true;
+      saveProgress();
+      let text = `${state.moves} moves, ${state.pushes} pushes.`;
+      if (state.pushes === r.level.pushes) text += " You used the minimum number of pushes!";
+      showOverlay(`Puzzle #${r.level.n} solved!`, text, "Next puzzle");
+      return;
+    }
     const prev = progress.best[levelIndex];
     const isBest = prev === undefined || state.moves < prev;
     if (isBest) progress.best[levelIndex] = state.moves;
@@ -192,14 +260,19 @@
 
     const par = LEVELS[levelIndex].par;
     const last = levelIndex === LEVELS.length - 1;
-    overlayTitle.textContent = last ? "All levels complete!" : "Level complete!";
     let text = `${state.moves} moves, ${state.pushes} pushes.`;
     if (par && state.moves <= par) text += " Perfect — you matched par!";
     else if (isBest && prev !== undefined) text += " New best!";
+    showOverlay(last ? "All levels complete!" : "Level complete!", text, last ? "Try random mode" : "Next level");
+  }
+
+  function showOverlay(title, text, buttonLabel) {
+    overlayTitle.textContent = title;
     overlayText.textContent = text;
-    overlayNext.textContent = last ? "Back to level 1" : "Next level";
+    overlayNext.classList.toggle("hidden", !buttonLabel);
+    if (buttonLabel) overlayNext.textContent = buttonLabel;
     overlay.classList.remove("hidden");
-    overlayNext.focus();
+    if (buttonLabel) overlayNext.focus();
   }
 
   function hideOverlay() {
@@ -207,12 +280,15 @@
   }
 
   function update() {
+    if (!state) return;
     el.moves.textContent = state.moves;
     el.pushes.textContent = state.pushes;
     el.boxes.textContent = `${boxesOnGoals()}/${state.goals.size}`;
-    const best = progress.best[levelIndex];
+    const isRandom = levelIndex === RANDOM;
+    const best = isRandom ? undefined : progress.best[levelIndex];
     el.best.textContent = best === undefined ? "–" : best;
-    el.par.textContent = LEVELS[levelIndex].par ?? "–";
+    el.parLabel.textContent = isRandom ? "Min pushes" : "Par";
+    el.par.textContent = (isRandom ? currentLevel().pushes : currentLevel().par) ?? "–";
     undoBtn.disabled = state.won || state.history.length === 0;
     draw();
   }
@@ -226,6 +302,10 @@
       opt.textContent = `${i + 1}. ${level.name}${done}`;
       levelSelect.appendChild(opt);
     });
+    const opt = document.createElement("option");
+    opt.value = String(RANDOM);
+    opt.textContent = progress.random ? `∞ Random (puzzle #${progress.random.level.n})` : "∞ Random";
+    levelSelect.appendChild(opt);
     levelSelect.value = String(levelIndex);
   }
 
@@ -342,7 +422,10 @@
     drawPlayer(state.player.x * tile, state.player.y * tile);
   }
 
-  function nextLevel() { startLevel(levelIndex + 1); }
+  function nextLevel() {
+    // Solved random puzzles advance to a harder one; startLevel generates it.
+    startLevel(levelIndex === RANDOM && state && state.won ? RANDOM : levelIndex + 1);
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.target === levelSelect) return;
@@ -355,13 +438,15 @@
       undo();
     } else if (e.code === "KeyT") {
       toggleTheme();
+    } else if (e.code === "KeyG") {
+      newPuzzle();
     } else if (e.code === "KeyR") {
       startLevel(levelIndex);
     } else if (e.code === "BracketRight" || e.code === "KeyN") {
       nextLevel();
     } else if (e.code === "BracketLeft" || e.code === "KeyP") {
       startLevel(levelIndex - 1);
-    } else if ((e.code === "Enter" || e.code === "Space") && state.won) {
+    } else if ((e.code === "Enter" || e.code === "Space") && state && state.won) {
       e.preventDefault();
       nextLevel();
     }
@@ -396,6 +481,7 @@
   undoBtn.addEventListener("click", undo);
   themeToggle.addEventListener("click", toggleTheme);
   restartBtn.addEventListener("click", () => startLevel(levelIndex));
+  newPuzzleBtn.addEventListener("click", newPuzzle);
   overlayNext.addEventListener("click", nextLevel);
   window.addEventListener("resize", resize);
 
@@ -404,6 +490,7 @@
     btn.addEventListener("mouseup", () => btn.blur());
   });
 
+  initWorker();
   loadTheme();
   populateSelect();
   startLevel(levelIndex);

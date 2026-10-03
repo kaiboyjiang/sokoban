@@ -28,7 +28,7 @@
       <div><span class="label">Pushes</span><span id="pushes">0</span></div>
       <div><span class="label">Boxes</span><span id="boxes">0/0</span></div>
       <div><span class="label">Best</span><span id="best">&ndash;</span></div>
-      <div><span class="label">Par</span><span id="par">&ndash;</span></div>
+      <div><span class="label" id="par-label">Par</span><span id="par">&ndash;</span></div>
     </section>
 
     <div class="board-wrap" id="board-wrap">
@@ -45,6 +45,7 @@
     <div class="controls">
       <button id="undo" title="Undo (Z)">Undo</button>
       <button id="restart" title="Restart (R)">Restart</button>
+      <button id="new-puzzle" class="hidden" title="New puzzle at this difficulty (G)">New puzzle</button>
     </div>
 
     <div class="dpad" aria-hidden="true">
@@ -54,10 +55,11 @@
       <button data-dir="right">&#9654;</button>
     </div>
 
-    <p class="help">Arrows / WASD to move &middot; Z undo &middot; R restart &middot; [ ] change level &middot; T theme</p>
+    <p class="help">Arrows / WASD to move &middot; Z undo &middot; R restart &middot; [ ] change level &middot; G new random puzzle &middot; T theme</p>
   </main>
 
   <script src="levels.js"></script>
+  <script src="generator.js"></script>
   <script src="sokoban.js"></script>
 </body>
 </html>
